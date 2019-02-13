@@ -1,0 +1,15 @@
+{
+    "manifest": {
+        "name": "codius-bar-contract",
+        "version": "1.0.0",
+        "machine": "small",
+        "port": "8080",
+        "containers": [
+            {
+                "id": "app",
+                "image": "{username}/codius-bar-contract@{digest}",
+                "workdir": "/app"
+            }
+        ]
+    }
+}

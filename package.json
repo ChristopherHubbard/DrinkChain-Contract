@@ -1,0 +1,47 @@
+{
+  "name": "codius-bar-contract",
+  "version": "1.0.0",
+  "description": "Default smart contract for a shared smart bar",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm run build && node --inspect-brk ./distlib/src/server/index.js",
+    "build": "tsc -p ./",
+    "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codius-smart-device-sharing/codius-bar-contract.git"
+  },
+  "author": "ChristopherHubbard",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/codius-smart-device-sharing/codius-bar-contract/issues"
+  },
+  "homepage": "https://github.com/codius-smart-device-sharing/codius-bar-contract#readme",
+  "dependencies": {
+    "@types/jest": "^24.0.3",
+    "@types/koa": "^2.0.48",
+    "@types/koa-mount": "^3.0.1",
+    "@types/koa-router": "^7.0.39",
+    "@types/koa-send": "^4.1.1",
+    "@types/koa-static": "^4.0.1",
+    "axios": "^0.18.0",
+    "koa": "^2.7.0",
+    "koa-combine-routers": "^4.0.2",
+    "koa-ilp": "^1.1.1",
+    "koa-mount": "^4.0.0",
+    "koa-request": "^1.0.0",
+    "koa-router": "^7.4.0",
+    "koa-send": "^5.0.0",
+    "koa-static": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/jest-diff": "^20.0.0",
+    "codius": "^3.1.0",
+    "jest": "^24.1.0",
+    "jest-diff": "^24.0.0",
+    "moneyd": "^4.3.0",
+    "moneyd-uplink-xrp": "^1.3.4",
+    "supertest": "^3.4.2"
+  }
+}
