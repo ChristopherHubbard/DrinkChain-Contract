@@ -5,15 +5,12 @@ export abstract class CustomRouter
 {
     public router: Router;
 
-    protected title : string;
+    protected title: string;
 
-    public constructor(title : string, prefix?: string)
+    public constructor(title: string, prefix?: string)
     {
         this.title = title;
         this.router = new Router({ prefix: prefix });
-
-        // Create the routes -- will call the implemented method
-        this.CreateRoutes();
     }
 
     // Method required to be implemented by the class to define the routes that the router uses

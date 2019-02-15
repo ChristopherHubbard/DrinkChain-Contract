@@ -6,30 +6,27 @@ import { CustomRouter } from "./CustomRouter";
 import { Drink, Ingredient } from "../models";
 
 // Defines the routes used at the index of the application
+// Import the drink config file
+const drinks: Map<string, number> = require('../config/pricing.json').drinksAndPrices;
+
 export class DeviceInformationRouter extends CustomRouter
 {
+    public constructor(title: string, prefix?: string)
+    {
+        super(title, prefix);
+        // Create the routes -- will call the implemented method
+        this.CreateRoutes();
+    }
     // Implement the route creating method
     protected CreateRoutes(): void
     {
         this.router.get('/drinks', async (ctx: Context): Promise<any> =>
         {
-            // Request the drink list from the device -- mixes/straight up
-            // Should be stored on the device as a map<string, map<string, int>>
-            const requestOptions: any =
-            {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            };
-
             try
             {
-                let res: AxiosResponse = await axios.get('', requestOptions);
-
-                // Parse the drinks response -- need to know response schema from device
-                let drinks: any = res.data;
-                ctx.response.body = {
-                    drinks: drinks
-                };
+                // Set the saved drinks as the response -- should be an env variable
+                ctx.response.body = drinks;
+                ctx.status = 200;
             }
             catch
             {

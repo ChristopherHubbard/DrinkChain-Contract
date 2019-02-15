@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run build && node --inspect-brk ./distlib/src/server/index.js",
-    "build": "tsc -p ./",
+    "build": "npm run copy && tsc -p ./",
+    "copy": "copyfiles src/**/*.json distlib/",
     "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
   },
   "repository": {
