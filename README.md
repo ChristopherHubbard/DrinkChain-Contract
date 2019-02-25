@@ -29,5 +29,12 @@ ilsp1.phobosnode.com
 # Never use a XRP wallet with a large amount of assets for development
 # Address will be populated by default
 
+# Start moneyd
+moneyd xrp:start --admin-api-port 7769
+
+# Optional: Connect with moneyd-gui
+npm install -g moneyd-gui
+moneyd-gui
+
 #################### Run the tests #########################################
 npm run test

@@ -1,7 +1,7 @@
 import * as Koa from "koa";
 import * as combineRouters from "koa-combine-routers";
 import * as serve from "koa-static";
-import { DeviceInformationRouter, DrinkPaymentRouter } from "./routers";
+import { DrinkPaymentRouter, ContractInfoRouter } from "./routers";
 
 let path: any = require("path");
 
@@ -39,7 +39,7 @@ export default class Server
     {
         // Attach all the routers
         const combinedRouter = combineRouters(
-            new DeviceInformationRouter("This is the router that requests information from the device", "/info").router,
+            new ContractInfoRouter("This is the router for contract information").router,
             new DrinkPaymentRouter("This is the router to send payed requests to the device", "/payment").router
         );
         
