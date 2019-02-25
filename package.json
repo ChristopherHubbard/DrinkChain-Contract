@@ -4,7 +4,9 @@
   "description": "Default smart contract for a shared smart bar",
   "main": "index.js",
   "scripts": {
-    "start": "npm run build && node --inspect-brk ./distlib/src/server/index.js",
+    "start": "npm run build && node ./distlib/src/index.js",
+    "debug": "npm run build && node --inspect-brk ./distlib/src/index.js",
+    "dockerize": "npm run build && docker build -t cbhubb8/codius-bar-contract .",
     "build": "npm run copy && tsc -p ./",
     "copy": "copyfiles src/**/*.json distlib/",
     "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
@@ -28,6 +30,7 @@
     "@types/koa-send": "^4.1.1",
     "@types/koa-static": "^4.0.1",
     "axios": "^0.18.0",
+    "copyfiles": "^2.1.0",
     "ilp": "^14.1.0",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",

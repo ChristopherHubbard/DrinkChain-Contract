@@ -12,23 +12,20 @@ const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
 
 const plugin = createPlugin();
 
+// Set the locals
+const invoiceNoLimit: number = 1000000;
+const receivers: Map<number, InvoiceReceiver> = new Map<number, InvoiceReceiver>();
+const paymentTimeout: number = 3 * 1000;
+let invoiceNoCount: number = 0;
+
 export class DrinkPaymentRouter extends CustomRouter
 {
-    private invoiceNoLimit: number = 1000000;
-    private receivers: Map<number, InvoiceReceiver>;
-    private invoiceNoCount: number;
-    private paymentTimeout: number = 3 * 1000;
-
     public constructor(title: string, prefix?: string)
     {
         super(title, prefix);
 
         // Create the routes -- will call the implemented method
         this.CreateRoutes();
-
-        // Create the receiver collection
-        this.receivers = new Map<number, InvoiceReceiver>();
-        this.invoiceNoCount = 0;
     }
 
     private async createInvoice(ctx: Context, next: Function)
@@ -37,20 +34,21 @@ export class DrinkPaymentRouter extends CustomRouter
         
         try
         {
-            this.receivers.set(this.invoiceNoCount, await receive(drinks.get(drink) as number, 'test-payment-123', plugin));
+            const receiver: InvoiceReceiver = await receive(drinks.get(drink) as number, 'test-payment-123');
+            receivers.set(invoiceNoCount, receiver);
 
             // Send the invoice back -- needed for the resolution with payment-request client side
             ctx.body = {
-                invoice: this.receivers.get(this.invoiceNoCount),
-                invoiceNo: this.invoiceNoCount
+                invoice: receivers.get(invoiceNoCount),
+                invoiceNo: invoiceNoCount
             };
 
-            this.invoiceNoCount++;
+            invoiceNoCount++;
 
             // Reset the invoice number and set the count to zero
-            if (this.invoiceNoCount >= this.invoiceNoLimit)
+            if (invoiceNoCount >= invoiceNoLimit)
             {
-                this.invoiceNoCount = 0;
+                invoiceNoCount = 0;
             }
         }
         catch (error)
@@ -67,8 +65,8 @@ export class DrinkPaymentRouter extends CustomRouter
         // Try to get the invoice and set up the payment receiver
         try
         {
-            const receiver: InvoiceReceiver = this.receivers.get(invoiceNo) as InvoiceReceiver;
-            const receiverReceipt: Receipt = await receiver.receivePayment(this.paymentTimeout);
+            const receiver: InvoiceReceiver = receivers.get(Number(invoiceNo)) as InvoiceReceiver;
+            const receiverReceipt: Receipt = await receiver.receivePayment(paymentTimeout);
 
             // Pay the host's payment pointer this amount
             const finalReceipt: Receipt = await pay({

@@ -31,7 +31,7 @@ export class ContractInfoRouter extends CustomRouter
             {
                 // Set the saved drinks as the response -- should be an env variable
                 ctx.body = {
-                    actions: drinks.keys()
+                    actions: Array.from(drinks.keys())
                 };
                 ctx.status = 200;
             }

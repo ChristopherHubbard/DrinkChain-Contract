@@ -80,3 +80,6 @@ package-lock.json
 
 # Exclude binaries
 .DS_Store
+
+# Codius outputs
+*.codiusstate.json

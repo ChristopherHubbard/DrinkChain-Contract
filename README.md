@@ -38,3 +38,7 @@ moneyd-gui
 
 #################### Run the tests #########################################
 npm run test
+
+#################### Upload the contract #########################################
+npm run dockerize
+docker
