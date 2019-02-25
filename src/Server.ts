@@ -40,7 +40,7 @@ export default class Server
         // Attach all the routers
         const combinedRouter = combineRouters(
             new ContractInfoRouter("This is the router for contract information").router,
-            new DrinkPaymentRouter("This is the router to send payed requests to the device", "/payment").router
+            new DrinkPaymentRouter("This is the router to send payed requests to the device").router
         );
         
         // Use the router middleware -- combine all the routers

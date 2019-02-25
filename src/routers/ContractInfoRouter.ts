@@ -5,8 +5,8 @@ import axios, { AxiosResponse } from 'axios';
 import { CustomRouter } from "./CustomRouter";
 
 // Set up the ilp configs
-const ilp: any = require('ilp');
-const plugin: any = ilp.createPlugin();
+import { ILDCP, createPlugin } from 'ilp';
+const plugin: any = createPlugin();
 
 // Import the config files for this bar
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').drinksAndPrices));
@@ -72,7 +72,7 @@ export class ContractInfoRouter extends CustomRouter
                 // Connect the plugin -- this might be deprecated when running live due to moneyd instance being the codius host's instance
                 // not the device host's instance?
                 await plugin.connect();
-                const { assetCode } = await ilp.ILDCP.fetch(plugin.sendData.bind(plugin));
+                const { assetCode } = await ILDCP.fetch(plugin.sendData.bind(plugin));
                 ctx.body = {
                     priceInfo: {
                         price: price,
