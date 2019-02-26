@@ -4,8 +4,11 @@
   "description": "Default smart contract for a shared smart bar",
   "main": "index.js",
   "scripts": {
-    "start": "npm run build && node --inspect-brk ./distlib/src/server/index.js",
-    "build": "tsc -p ./",
+    "start": "npm run build && node ./distlib/src/index.js",
+    "docker-debug": "npm run build && docker-compose build && docker-compose up",
+    "dockerize": "npm run build && docker build -t cbhubb8/codius-bar-contract .",
+    "build": "npm run copy && tsc -p ./",
+    "copy": "copyfiles src/**/*.json distlib/",
     "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
   },
   "repository": {
@@ -21,12 +24,16 @@
   "dependencies": {
     "@types/jest": "^24.0.3",
     "@types/koa": "^2.0.48",
+    "@types/koa-bodyparser": "^4.2.2",
     "@types/koa-mount": "^3.0.1",
     "@types/koa-router": "^7.0.39",
     "@types/koa-send": "^4.1.1",
     "@types/koa-static": "^4.0.1",
     "axios": "^0.18.0",
+    "copyfiles": "^2.1.0",
+    "ilp": "^14.1.0",
     "koa": "^2.7.0",
+    "koa-bodyparser": "^4.2.1",
     "koa-combine-routers": "^4.0.2",
     "koa-ilp": "^1.1.1",
     "koa-mount": "^4.0.0",
@@ -42,6 +49,9 @@
     "jest-diff": "^24.0.0",
     "moneyd": "^4.3.0",
     "moneyd-uplink-xrp": "^1.3.4",
-    "supertest": "^3.4.2"
+    "nodemon": "^1.18.10",
+    "supertest": "^3.4.2",
+    "ts-jest": "^24.0.0",
+    "typescript": "^3.3.3333"
   }
 }

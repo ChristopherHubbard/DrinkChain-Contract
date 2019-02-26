@@ -1,0 +1,20 @@
+{
+    "actions": {
+        "Whiskey Coke": {
+            "Whiskey": 1,
+            "Coke": 1
+        },
+        "Scotch Neat": {
+            "Scotch": 1
+        },
+        "Whiskey": {
+            "Whiskey": 1
+        },
+        "Coke": {
+            "Coke": 1
+        },
+        "Vodka": {
+            "Vodka": 1
+        }
+    }
+}
