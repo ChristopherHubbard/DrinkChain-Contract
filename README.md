@@ -40,5 +40,14 @@ moneyd-gui
 npm run test
 
 #################### Upload the contract #########################################
+
+# Dockerize the application
 npm run dockerize
-docker
+
+# Push to dockerhub
+docker push cbhubb8/codius-bar-contract
+
+# A digest should be printed -- copy that to the digest section of the codius.json file
+
+# Upload to the top codius host from the codius host site -- delete codiusstate.json file if necessary
+codius upload --host https://hodling-xrp.org --duration 300

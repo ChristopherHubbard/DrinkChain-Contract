@@ -1,0 +1,12 @@
+version: '3.6'
+
+services:
+  app: 
+    build: .
+    ports:
+      - "8080:8080" 
+      - "9229:9229"
+    command:
+      - node
+      - "--inspect-brk=0.0.0.0"
+      - "./distlib/src/index.js" 

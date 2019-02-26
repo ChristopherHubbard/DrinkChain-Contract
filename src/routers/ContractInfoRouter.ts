@@ -6,7 +6,6 @@ import { CustomRouter } from "./CustomRouter";
 
 // Set up the ilp configs
 import { ILDCP, createPlugin } from 'ilp';
-const plugin: any = createPlugin();
 
 // Import the config files for this bar
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').drinksAndPrices));
@@ -69,8 +68,8 @@ export class ContractInfoRouter extends CustomRouter
                 // Check for the base currency -- should work but routing issue??
                 // Make this work with USD
 
-                // Connect the plugin -- this might be deprecated when running live due to moneyd instance being the codius host's instance
-                // not the device host's instance?
+                // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
+                const plugin: any = createPlugin();
                 await plugin.connect();
                 const { assetCode } = await ILDCP.fetch(plugin.sendData.bind(plugin));
                 ctx.body = {
@@ -84,7 +83,10 @@ export class ContractInfoRouter extends CustomRouter
             catch (error)
             {
                 console.error(error);
-                ctx.status = 404;
+                ctx.status = 500;
+                ctx.body = {
+                    error: error
+                }
             }
         });
 

@@ -10,8 +10,6 @@ const drinks: Map<string, number> = new Map<string, number>(Object.entries(requi
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
 
-const plugin = createPlugin();
-
 // Set the locals
 const invoiceNoLimit: number = 1000000;
 const receivers: Map<number, InvoiceReceiver> = new Map<number, InvoiceReceiver>();
@@ -72,7 +70,7 @@ export class DrinkPaymentRouter extends CustomRouter
             const finalReceipt: Receipt = await pay({
                 amount: receiverReceipt.received.amount,
                 paymentPointer: '$chris.localtunnel.me'
-            }, plugin);
+            });
         }
         // If the payment fails the item should come here
         catch (error)

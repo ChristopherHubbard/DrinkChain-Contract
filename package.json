@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run build && node ./distlib/src/index.js",
-    "debug": "npm run build && node --inspect-brk ./distlib/src/index.js",
+    "docker-debug": "npm run build && docker-compose build && docker-compose up",
     "dockerize": "npm run build && docker build -t cbhubb8/codius-bar-contract .",
     "build": "npm run copy && tsc -p ./",
     "copy": "copyfiles src/**/*.json distlib/",
@@ -49,6 +49,7 @@
     "jest-diff": "^24.0.0",
     "moneyd": "^4.3.0",
     "moneyd-uplink-xrp": "^1.3.4",
+    "nodemon": "^1.18.10",
     "supertest": "^3.4.2",
     "ts-jest": "^24.0.0",
     "typescript": "^3.3.3333"
