@@ -8,7 +8,8 @@ import { CustomRouter } from "./CustomRouter";
 import { ILDCP, createPlugin } from 'ilp';
 
 // Import the config files for this bar
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').drinksAndPrices));
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
+const baseAsset: string = require('../config/pricing.json').baseAsset;
 const infoFields: Array<string> = new Array<string>(require('../config/infoFields.json').infoFields);
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
@@ -71,7 +72,7 @@ export class ContractInfoRouter extends CustomRouter
                 // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
                 const plugin: any = createPlugin();
                 await plugin.connect();
-                const { assetCode } = await ILDCP.fetch(plugin.sendData.bind(plugin));
+                const assetCode = baseAsset;
                 ctx.body = {
                     priceInfo: {
                         price: price,
@@ -98,6 +99,13 @@ export class ContractInfoRouter extends CustomRouter
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             };
+
+            // This is just for testing -- remove soon!
+            ctx.body = {
+                canOrder: true
+            };
+            ctx.status = 200;
+            return ctx;
 
             // Try to get the current cup quantity -- check that this works with koas pipeline
             const res: AxiosResponse = await axios.get(`${deviceURL}/cups`, requestOptions);

@@ -7,7 +7,7 @@
         "containers": [
             {
                 "id": "app",
-                "image": "cbhubb8/codius-bar-contract@sha256:20541220f8a099a207d91442dff4700cb28fa5692b8953d66f8bceeec11f468f",
+                "image": "cbhubb8/codius-bar-contract@sha256:0c7d926db5f3c63dc01a92b5b82cda9edfc2fa6f6a0e4a44ed55601fe2c4695e",
                 "workdir": "/"
             }
         ]

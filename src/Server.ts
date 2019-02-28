@@ -1,9 +1,10 @@
 import * as Koa from "koa";
 import * as combineRouters from "koa-combine-routers";
-import * as serve from "koa-static";
 import { DrinkPaymentRouter, ContractInfoRouter } from "./routers";
+import * as CORS from "@koa/cors";
 
 let path: any = require("path");
+let bodyParser: any = require('koa-bodyparser');
 
 // Set the port to listen on -- may want to make this more customizable
 const PORT: number = 8080;
@@ -27,6 +28,7 @@ export default class Server
     public Configure()
     {
         // Add static paths -- needs to be updated for the different frontend methods
+        this.app.use(bodyParser());
 
         // Add error handling
         this.app.on("error", console.error);
@@ -44,6 +46,7 @@ export default class Server
         );
         
         // Use the router middleware -- combine all the routers
+        this.app.use(CORS());
         this.app.use(combinedRouter());
     }
 }

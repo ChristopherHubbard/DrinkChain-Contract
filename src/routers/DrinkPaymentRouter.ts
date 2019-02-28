@@ -1,20 +1,23 @@
 import { Context } from "koa";
 import axios, { AxiosResponse } from 'axios';
-import { InvoiceReceiver, Receipt, createPlugin, receive, pay } from 'ilp';
+import { SPSP, createPlugin } from 'ilp';
 
 // Import base route class
+import { OrderData } from '../models';
 import { CustomRouter } from "./CustomRouter";
+import SPSPServer from '../SPSPServer';
 
 // Import the drink config file
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').drinksAndPrices));
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
+const paymentPointer: string = require('../config/hostSPSP.json').paymentPointer;
 
 // Set the locals
-const invoiceNoLimit: number = 1000000;
-const receivers: Map<number, InvoiceReceiver> = new Map<number, InvoiceReceiver>();
-const paymentTimeout: number = 3 * 1000;
-let invoiceNoCount: number = 0;
+const paymentTimeout: number = 30 * 1000;
+let currentData: OrderData | undefined;
+let spsp: string;
+let currentTimeout: NodeJS.Timeout;
 
 export class DrinkPaymentRouter extends CustomRouter
 {
@@ -26,98 +29,135 @@ export class DrinkPaymentRouter extends CustomRouter
         this.CreateRoutes();
     }
 
-    private async createInvoice(ctx: Context, next: Function)
+    private async endPointValidation(ctx: Context, next: Function)
     {
-        const drink: string = ctx.request.query.action;
-        
-        try
+        // Check that the request came from the localhost? -- otherwise this is a client error
+        if (ctx.host !== 'localhost:8080')
         {
-            const receiver: InvoiceReceiver = await receive(drinks.get(drink) as number, 'test-payment-123');
-            receivers.set(invoiceNoCount, receiver);
-
-            // Send the invoice back -- needed for the resolution with payment-request client side
-            ctx.body = {
-                invoice: receivers.get(invoiceNoCount),
-                invoiceNo: invoiceNoCount
-            };
-
-            invoiceNoCount++;
-
-            // Reset the invoice number and set the count to zero
-            if (invoiceNoCount >= invoiceNoLimit)
-            {
-                invoiceNoCount = 0;
-            }
+            ctx.status = 400;
+            return ctx;
         }
-        catch (error)
-        {
-            ctx.throw(error);
-        }
-    }
-
-    private async awaitPayment(ctx: Context, next: Function)
-    {
-        // Get the invoiceNo from the user
-        const { invoiceNo } = ctx.request.query;
-
-        // Try to get the invoice and set up the payment receiver
-        try
-        {
-            const receiver: InvoiceReceiver = receivers.get(Number(invoiceNo)) as InvoiceReceiver;
-            const receiverReceipt: Receipt = await receiver.receivePayment(paymentTimeout);
-
-            // Pay the host's payment pointer this amount
-            const finalReceipt: Receipt = await pay({
-                amount: receiverReceipt.received.amount,
-                paymentPointer: '$chris.localtunnel.me'
-            });
-        }
-        // If the payment fails the item should come here
-        catch (error)
-        {
-            ctx.throw(error);
-        }
+        await next();
     }
 
     // Implement the route creating method
     protected CreateRoutes(): void
     {
-        this.router.get('/invoice', this.createInvoice, async (ctx: Context, next: Function): Promise<any> =>
+        this.router.get('/invoice', async (ctx: Context, next: Function): Promise<any> =>
         {
-            // Send the request to create an invoice for this payment
-            ctx.status = 200;
-        });
-
-        this.router.get('/pay', this.awaitPayment, async (ctx: Context, next: Function) =>
-        {
-            // Send the action request to the device/bar
-            const { action, infoFields } = ctx.request.query;
-
-            const requestOptions: any =
-            {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                params: {
-                    ingredients: actionsRequirements.get(action),
-                    destination: infoFields.destination
-                }
-            };
-
             try
             {
-                const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
-
-                // How to process the response?
-
+                // Query to make sure the hosts paymentPointer is available
+                await SPSP.query(paymentPointer);
+                if (!spsp)
+                {
+                    spsp = await SPSPServer();
+                }
+    
+                // Send the invoice back -- needed for the resolution with payment-request client side
+                ctx.body = {
+                    paymentPointer: spsp
+                };
                 ctx.status = 200;
             }
             catch (error)
             {
-                ctx.status = 500;
-
-
-                // Pay back a refund?
+                ctx.throw(error);
             }
-        })
+        });
+
+        this.router.post('/order', this.endPointValidation, async (ctx: any, next: Function): Promise<any> =>
+        {
+            // Send the request to the bar -- use the currently set data
+            const { amount } = JSON.parse(ctx.request.body.body);
+            if (typeof currentData !== undefined)
+            {
+                const { amount } = JSON.parse(ctx.request.body.body);
+                const { action, infoFields } = currentData as OrderData;
+                if (Number(amount) < (drinks.get(action) as number))
+                {
+                    // Amount is not paid in full -- currently only full payments are supported, since refunds fail
+                    console.error('Action was not paid for in full!');
+                    ctx.status = 500;
+                    return ctx;
+                }
+
+                // Send the payment to the owner's SPSP pointer -- should still be available since query
+                await SPSP.pay(createPlugin(), {
+                    receiver: paymentPointer,
+                    sourceAmount: (drinks.get(action) as number).toString()
+                });
+
+                const requestOptions: any =
+                {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    params: {
+                        ingredients: actionsRequirements.get(action),
+                        destination: infoFields.get('destination number')
+                    }
+                };
+
+                try
+                {
+                    const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
+
+                    // How to process the response?
+                    console.log('Successful order!');
+
+                    // Clear the timeout and remove the data
+                    clearTimeout(currentTimeout);
+                    currentData = undefined;
+
+                    ctx.status = 200;
+                }
+                catch (error)
+                {
+                    // There was some error sending to the bar
+                    console.log('Error on order!');
+                    ctx.status = 500;
+                }
+            }
+            else
+            {
+                ctx.status = 500;
+            }
+        });
+
+        // Endpoint to set the data
+        this.router.post('/setData', async (ctx: any, next: Function): Promise<any> =>
+        {
+            // Check if the data is set -- should be unset on timeout
+            const { action } = JSON.parse(ctx.request.body.body);
+            const infoFields = JSON.parse(JSON.parse(ctx.request.body.body).infoFields);
+
+            if (typeof currentData !== undefined && drinks.get(action) !== undefined)
+            {
+                // Set the data and create the timeout -- how long?
+                currentData = <OrderData> {
+                    action: action,
+                    infoFields: new Map<string, string>(Object.entries(infoFields))
+                };
+
+                // Set the timeout to remove the data
+                currentTimeout = setTimeout(() =>
+                {
+                    // Set the currentData to undefined
+                    currentData = undefined;
+                }, paymentTimeout);
+
+                ctx.body = {
+                    success: true
+                };
+                ctx.status = 200;
+            }
+            else
+            {
+                ctx.body = {
+                    success: false
+                };
+                ctx.status = 503;
+            }
+        });
     }
 }

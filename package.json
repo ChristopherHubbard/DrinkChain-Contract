@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/codius-smart-device-sharing/codius-bar-contract#readme",
   "dependencies": {
+    "@koa/cors": "^2.2.3",
     "@types/jest": "^24.0.3",
     "@types/koa": "^2.0.48",
     "@types/koa-bodyparser": "^4.2.2",
@@ -29,8 +30,10 @@
     "@types/koa-router": "^7.0.39",
     "@types/koa-send": "^4.1.1",
     "@types/koa-static": "^4.0.1",
+    "@types/koa__cors": "^2.2.3",
     "axios": "^0.18.0",
     "copyfiles": "^2.1.0",
+    "get-port": "^4.1.0",
     "ilp": "^14.1.0",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",
@@ -40,7 +43,8 @@
     "koa-request": "^1.0.0",
     "koa-router": "^7.4.0",
     "koa-send": "^5.0.0",
-    "koa-static": "^5.0.0"
+    "koa-static": "^5.0.0",
+    "localtunnel": "^1.9.1"
   },
   "devDependencies": {
     "@types/jest-diff": "^20.0.0",
