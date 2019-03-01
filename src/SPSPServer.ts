@@ -48,6 +48,7 @@ export default async function run()
                 try
                 {
                     const res: AxiosResponse = await axios.post('http://localhost:8080/order', requestOptions);
+                    //const res: any = await callback(amount);
 
                     // This should never fail, and cant return data anyway, so whatever
                     console.log(res);

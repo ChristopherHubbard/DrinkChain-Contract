@@ -69,7 +69,6 @@ export class DrinkPaymentRouter extends CustomRouter
         this.router.post('/order', this.endPointValidation, async (ctx: any, next: Function): Promise<any> =>
         {
             // Send the request to the bar -- use the currently set data
-            const { amount } = JSON.parse(ctx.request.body.body);
             if (typeof currentData !== undefined)
             {
                 const { amount } = JSON.parse(ctx.request.body.body);

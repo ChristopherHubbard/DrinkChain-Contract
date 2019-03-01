@@ -1,10 +1,11 @@
 {
     "actionsAndPrices": {
-        "Whiskey Coke": 7,
-        "Scotch Neat": 10,
-        "Whiskey": 5,
-        "Coke": 2,
-        "Vodka": 6
+        "Whiskey Coke": 7000,
+        "Scotch Neat": 10000,
+        "Whiskey": 5000,
+        "Coke": 2000,
+        "Vodka": 6000
     },
-    "baseAsset": "XRP"
+    "baseAsset": "XRP",
+    "assetScale": 9
 }
