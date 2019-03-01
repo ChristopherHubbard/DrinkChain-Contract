@@ -13,7 +13,7 @@ const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entrie
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
 const paymentPointer: string = require('../config/hostSPSP.json').paymentPointer;
 
-// Set the locals
+// Set the locals -- is there a better way to manage the paymentTimeout and currentData?
 const paymentTimeout: number = 30 * 1000;
 let currentData: OrderData | undefined;
 let spsp: string;
@@ -29,17 +29,6 @@ export class DrinkPaymentRouter extends CustomRouter
         this.CreateRoutes();
     }
 
-    private async endPointValidation(ctx: Context, next: Function)
-    {
-        // Check that the request came from the localhost? -- otherwise this is a client error
-        if (ctx.host !== 'localhost:8080')
-        {
-            ctx.status = 400;
-            return ctx;
-        }
-        await next();
-    }
-
     // Implement the route creating method
     protected CreateRoutes(): void
     {
@@ -51,7 +40,7 @@ export class DrinkPaymentRouter extends CustomRouter
                 await SPSP.query(paymentPointer);
                 if (!spsp)
                 {
-                    spsp = await SPSPServer();
+                    spsp = await SPSPServer(this.order);
                 }
     
                 // Send the invoice back -- needed for the resolution with payment-request client side
@@ -63,63 +52,6 @@ export class DrinkPaymentRouter extends CustomRouter
             catch (error)
             {
                 ctx.throw(error);
-            }
-        });
-
-        this.router.post('/order', this.endPointValidation, async (ctx: any, next: Function): Promise<any> =>
-        {
-            // Send the request to the bar -- use the currently set data
-            if (typeof currentData !== undefined)
-            {
-                const { amount } = JSON.parse(ctx.request.body.body);
-                const { action, infoFields } = currentData as OrderData;
-                if (Number(amount) < (drinks.get(action) as number))
-                {
-                    // Amount is not paid in full -- currently only full payments are supported, since refunds fail
-                    console.error('Action was not paid for in full!');
-                    ctx.status = 500;
-                    return ctx;
-                }
-
-                // Send the payment to the owner's SPSP pointer -- should still be available since query
-                await SPSP.pay(createPlugin(), {
-                    receiver: paymentPointer,
-                    sourceAmount: (drinks.get(action) as number).toString()
-                });
-
-                const requestOptions: any =
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    params: {
-                        ingredients: actionsRequirements.get(action),
-                        destination: infoFields.get('destination number')
-                    }
-                };
-
-                try
-                {
-                    const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
-
-                    // How to process the response?
-                    console.log('Successful order!');
-
-                    // Clear the timeout and remove the data
-                    clearTimeout(currentTimeout);
-                    currentData = undefined;
-
-                    ctx.status = 200;
-                }
-                catch (error)
-                {
-                    // There was some error sending to the bar
-                    console.log('Error on order!');
-                    ctx.status = 500;
-                }
-            }
-            else
-            {
-                ctx.status = 500;
             }
         });
 
@@ -158,5 +90,58 @@ export class DrinkPaymentRouter extends CustomRouter
                 ctx.status = 503;
             }
         });
+    }
+
+    private async order(amount: number): Promise<any>
+    {
+        // Send the request to the bar -- use the currently set data
+        if (typeof currentData !== undefined)
+        {
+            const { action, infoFields } = currentData as OrderData;
+            if (Number(amount) < (drinks.get(action) as number))
+            {
+                // Amount is not paid in full -- currently only full payments are supported, since refunds fail
+                console.error('Action was not paid for in full!');
+                throw new Error('500 error');
+            }
+
+            // Send the payment to the owner's SPSP pointer -- should still be available since query
+            await SPSP.pay(createPlugin(), {
+                receiver: paymentPointer,
+                sourceAmount: Number(amount)
+            });
+
+            const requestOptions: any =
+            {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                params: {
+                    ingredients: actionsRequirements.get(action),
+                    destination: infoFields.get('destination number')
+                }
+            };
+
+            try
+            {
+                const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
+
+                // How to process the response?
+                console.log('Successful order!');
+
+                // Clear the timeout and remove the data
+                clearTimeout(currentTimeout);
+                currentData = undefined;
+            }
+            catch (error)
+            {
+                // There was some error sending to the bar
+                console.log('Error on order!');
+                throw error;
+            }
+        }
+        else
+        {
+            throw new Error('500 Error');
+        }
     }
 }

@@ -10,7 +10,7 @@ import axios, { AxiosResponse } from 'axios';
 
 const name = crypt.randomBytes(8).toString('hex')
 
-export default async function run()
+export default async function run(callback: (amount: number) => Promise<any>)
 {
     console.log('connecting...');
     const streamPlugin = makePlugin();
@@ -47,8 +47,8 @@ export default async function run()
                 // Call the buy drink -- this should retrieve what drink this person wants
                 try
                 {
-                    const res: AxiosResponse = await axios.post('http://localhost:8080/order', requestOptions);
-                    //const res: any = await callback(amount);
+                    //const res: AxiosResponse = await axios.post('http://localhost:8080/order', requestOptions);
+                    const res: any = await callback(amount);
 
                     // This should never fail, and cant return data anyway, so whatever
                     console.log(res);
