@@ -6,9 +6,13 @@ import { CustomRouter } from "./CustomRouter";
 
 // Set up the ilp configs
 import { ILDCP, createPlugin } from 'ilp';
+const ilpPrice: any = require('ilp-price');
+const priceFetch: any = new ilpPrice();
 
 // Import the config files for this bar
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').drinksAndPrices));
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
+const baseAsset: string = require('../config/pricing.json').baseAsset;
+const assetScale: string = require('../config/pricing.json').assetScale;
 const infoFields: Array<string> = new Array<string>(require('../config/infoFields.json').infoFields);
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
@@ -63,19 +67,19 @@ export class ContractInfoRouter extends CustomRouter
             try
             {
                 const selectedDrink: string = ctx.request.query.action;
+                const clientCurrency: string = ctx.request.query.clientAsset
                 const price: number = drinks.get(selectedDrink) as number;
 
                 // Check for the base currency -- should work but routing issue??
                 // Make this work with USD
 
                 // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
-                const plugin: any = createPlugin();
-                await plugin.connect();
-                const { assetCode } = await ILDCP.fetch(plugin.sendData.bind(plugin));
+                const exchangeRate: number = 1;
+                const priceInClientCurrency = price * exchangeRate
                 ctx.body = {
                     priceInfo: {
-                        price: price,
-                        baseCurrency: assetCode
+                        price: priceInClientCurrency,
+                        baseCurrency: clientCurrency
                     }
                 };
                 ctx.status = 200;
@@ -98,6 +102,13 @@ export class ContractInfoRouter extends CustomRouter
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             };
+
+            // This is just for testing -- remove soon!
+            ctx.body = {
+                canOrder: true
+            };
+            ctx.status = 200;
+            return ctx;
 
             // Try to get the current cup quantity -- check that this works with koas pipeline
             const res: AxiosResponse = await axios.get(`${deviceURL}/cups`, requestOptions);

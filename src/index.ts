@@ -1,4 +1,5 @@
 import Server from "./Server";
+import SPSPServer from './SPSPServer';
 
 // Create the app
-let app: Server = new Server();
+const app: Server = new Server();

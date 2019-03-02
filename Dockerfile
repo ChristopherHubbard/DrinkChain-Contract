@@ -15,6 +15,7 @@ RUN npm install --only=production
 # Make port 8080 available to the outside world
 EXPOSE 8080
 EXPOSE 9229
+EXPOSE 3000
 
 # Run the command 'npm start' which will start our server.js file
 CMD [ "node", "./distlib/src/index.js"]
