@@ -9,6 +9,7 @@ import SPSPServer from '../SPSPServer';
 
 // Import the drink config file
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
+const assetScale: number = require('../config/pricing.json').assetScale;
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
 const paymentPointer: string = require('../config/hostSPSP.json').paymentPointer;
@@ -98,7 +99,7 @@ export class DrinkPaymentRouter extends CustomRouter
         if (typeof currentData !== undefined)
         {
             const { action, infoFields } = currentData as OrderData;
-            if (Number(amount) < (drinks.get(action) as number))
+            if (Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale))
             {
                 // Amount is not paid in full -- currently only full payments are supported, since refunds fail
                 console.error('Action was not paid for in full!');
