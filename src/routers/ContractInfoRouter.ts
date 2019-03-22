@@ -16,6 +16,7 @@ const assetScale: string = require('../config/pricing.json').assetScale;
 const infoFields: Array<string> = new Array<string>(require('../config/infoFields.json').infoFields);
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
 const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
+const supportedMethods: Array<string> = require('../config/payments.json').supportedMethods;
 
 export class ContractInfoRouter extends CustomRouter
 {
@@ -91,6 +92,26 @@ export class ContractInfoRouter extends CustomRouter
                 ctx.body = {
                     error: error
                 }
+            }
+        });
+
+        this.router.get('/paymentMethods', async (ctx: Context): Promise<any> =>
+        {
+            // Get the accepted payment methods by this contract
+            try
+            {
+                ctx.body = {
+                    supportedMethods: supportedMethods
+                };
+                ctx.status = 200;
+            }
+            catch (error)
+            {
+                console.error(error);
+                ctx.status = 500;
+                ctx.body = {
+                    error: error
+                };
             }
         });
 

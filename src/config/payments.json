@@ -1,0 +1,6 @@
+{
+    "supportedMethods": [
+        "interledger",
+        "paypal"
+    ]
+}

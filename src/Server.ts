@@ -2,6 +2,7 @@ import * as Koa from "koa";
 import * as combineRouters from "koa-combine-routers";
 import { DrinkPaymentRouter, ContractInfoRouter } from "./routers";
 import * as CORS from "@koa/cors";
+import * as serve from "koa-static";
 
 let path: any = require("path");
 let bodyParser: any = require('koa-bodyparser');
@@ -47,6 +48,7 @@ export default class Server
         
         // Use the router middleware -- combine all the routers
         this.app.use(CORS());
+        this.app.use(serve(__dirname + '/assets'));
         this.app.use(combinedRouter());
     }
 }

@@ -8,7 +8,7 @@
     "docker-debug": "npm run build && docker-compose build && docker-compose up",
     "dockerize": "npm run build && docker build -t cbhubb8/codius-bar-contract .",
     "build": "npm run copy && tsc -p ./",
-    "copy": "copyfiles src/**/*.json distlib/",
+    "copy": "copyfiles src/**/*.json distlib/ && copyfiles src/**/*.png distlib/",
     "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
   },
   "repository": {
