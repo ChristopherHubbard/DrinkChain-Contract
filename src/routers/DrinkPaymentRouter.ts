@@ -104,14 +104,17 @@ export class DrinkPaymentRouter extends CustomRouter
         // This is the route for creating a Paypal payment
         this.router.post('/paypal/create-payment/', async (ctx: Context, next: Function): Promise<any> =>
         {
+            // Extract the hostname of this contract
+            const { host } = ctx;
+
             const create_payment_json: any = {
                 intent: 'sale',
                 payer: {
                     payment_method: 'paypal'
                 },
                 redirect_urls: {
-                    return_url: 'https://iotsharenet.com',
-                    cancel_url: 'https://iotsharenet.com'
+                    return_url: `https://${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
+                    cancel_url: 'https://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
                 },
                 transactions: [{
                     amount: {
