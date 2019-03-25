@@ -7,7 +7,6 @@ import { configure, payment } from 'paypal-rest-sdk';
 import { OrderData } from '../models';
 import { CustomRouter } from "./CustomRouter";
 import { SPSPServer } from '../paymentReceivers';
-import { resolve } from "dns";
 
 // Import the drink config file
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
