@@ -7,8 +7,12 @@
         "containers": [
             {
                 "id": "app",
-                "image": "cbhubb8/codius-bar-contract@sha256:f2c085b17a348bad8ad6b6250de50108344ad59a3a595e4204e0fe9489638b6d",
-                "workdir": "/"
+                "image": "cbhubb8/codius-bar-contract@sha256:de60de05d52556ed946b8c86ca6e8d423e2b22b87a1fc26b8f33c16c6aab096d",
+                "workdir": "/",
+                "environment": {
+                    "PAYPAL_CLIENT_ID": "$PAYPAL_CLIENT_ID",
+                    "PAYPAL_SECRET": "$PAYPAL_SECRET"
+                }
             }
         ]
     }

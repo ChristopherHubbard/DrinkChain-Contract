@@ -1,7 +1,14 @@
 {
   "vars": {
     "public": {
+      "PAYPAL_CLIENT_ID": {
+        "value": "AetavAfUQfYBB4B_tCDsLv_JZj_RJhkf_74stpk7P77JHLcROG0B0Kj8J9R15cT0yC360RbxzwGgvjUh"
+      }
     },
-    "private": {}
+    "private": {
+      "PAYPAL_SECRET": {
+        "value": "EHe8yukQLsaKxoSVttge1FBFmDeoLlfyTkHW2mYGThfVLGJyMiYWO8oWXGGUGIKRRftsd2Xrh_s2Qsc_"
+      }
+    }
   }
 }

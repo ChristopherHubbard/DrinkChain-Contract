@@ -5,7 +5,7 @@ import axios, { AxiosResponse } from 'axios';
 import { CustomRouter } from "./CustomRouter";
 
 // Set up the ilp configs
-import { ILDCP, createPlugin } from 'ilp';
+import { ILDCP, createPlugin } from 'ilp/src';
 const ilpPrice: any = require('ilp-price');
 const priceFetch: any = new ilpPrice();
 
@@ -191,6 +191,14 @@ export class ContractInfoRouter extends CustomRouter
                  canOrder: true
              };
              ctx.status = 200;
+        });
+
+        this.router.get('/env', async (ctx: any): Promise<any> => 
+        {
+            ctx.body = {
+                env: process.env
+            };
+            ctx.status = 200;
         });
     }
 }

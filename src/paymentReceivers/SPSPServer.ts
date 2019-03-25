@@ -10,7 +10,7 @@ import axios, { AxiosResponse } from 'axios';
 
 const name = crypt.randomBytes(8).toString('hex')
 
-export default async function run(callback: (amount: number) => Promise<any>)
+async function run(callback: (amount: number, method: string) => Promise<any>)
 {
     console.log('connecting...');
     const streamPlugin = makePlugin();
@@ -48,7 +48,7 @@ export default async function run(callback: (amount: number) => Promise<any>)
                 try
                 {
                     //const res: AxiosResponse = await axios.post('http://localhost:8080/order', requestOptions);
-                    const res: any = await callback(amount);
+                    const res: any = await callback(amount, 'interledger');
 
                     // This should never fail, and cant return data anyway, so whatever
                     console.log(res);
@@ -98,3 +98,7 @@ export default async function run(callback: (amount: number) => Promise<any>)
 
     return paymentPointer;
 }
+
+export const SPSPServer = {
+    run: run
+};
