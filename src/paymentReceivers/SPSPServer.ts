@@ -3,98 +3,88 @@ const getPort = require('get-port');
 const makePlugin = require('ilp-plugin');
 const localtunnel = require('localtunnel');
 const { Server } = require('ilp-protocol-stream');
-const Koa = require('koa')
-const app = new Koa()
+const Koa = require('koa');
+const app = new Koa();
 import * as crypt from 'crypto';
-import axios, { AxiosResponse } from 'axios';
 
-const name = crypt.randomBytes(8).toString('hex')
+const name = crypt.randomBytes(8).toString('hex');
+const paymentPointer: string = '$' + name + '.localtunnel.me';
+let streamServer: any;
 
-async function run(callback: (amount: number, method: string) => Promise<any>)
+async function run(create: boolean, callback: (orderHash: string, amount: number, method: string) => Promise<any>): Promise<string>
 {
-    console.log('connecting...');
-    const streamPlugin = makePlugin();
-
-    await streamPlugin.connect();
-
-    // Set the port manually to expose on docker
-    const port = 3000;
-    const streamServer = new Server({
-        plugin: streamPlugin,
-        serverSecret: crypt.randomBytes(32)
-    });
-
-    streamServer.on('connection', (connection: any) => 
+    // May want to do paymentPointers in HTTPS format?
+    if (create)
     {
-        connection.on('stream', (stream: any) => 
+        console.log('connecting...');
+        const streamPlugin = makePlugin();
+    
+        await streamPlugin.connect();
+    
+        // Set the port manually to expose on docker
+        const port = 3000;
+        streamServer = new Server({
+            plugin: streamPlugin,
+            serverSecret: crypt.randomBytes(32)
+        });
+    
+        streamServer.on('connection', (connection: any) => 
         {
-            stream.setReceiveMax(10000000000000);
-            stream.on('money', async (amount: any) => 
+            connection.on('stream', (stream: any) => 
             {
-                console.log('got packet for', amount, 'units');
+                stream.setReceiveMax(10000000000000);
 
-                const requestOptions: any =
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        amount: amount
-                    })
-                };
+                // Will this be effective enough?
+                let orderHash: string;
 
-                // Call the buy drink -- this should retrieve what drink this person wants
-                try
+                stream.on('money', async (amount: any) =>
                 {
-                    //const res: AxiosResponse = await axios.post('http://localhost:8080/order', requestOptions);
-                    const res: any = await callback(amount, 'interledger');
-
-                    // This should never fail, and cant return data anyway, so whatever
-                    console.log(res);
-                }
-                catch (error)
-                {
-                    // Should never end up here
-                    console.error(error);
-                }
+                    // Set the values in this closure? -- Hopefully this works
+                    console.log('Got packet for', amount, 'units');
+                    stream.on('data', async (data: any) =>
+                    {
+                        // Make sure that this executes correctly! data -> money
+                        orderHash = data.toString();
+                        console.log(orderHash);
+                        await callback(orderHash, amount, 'interledger');
+                    });
+                });
             });
         });
-    });
-
-    await streamServer.listen();
-
-    async function handleSPSP(ctx: any, next: any)
-    {
-        if (ctx.get('Accept').indexOf('application/spsp4+json') !== -1)
+    
+        await streamServer.listen();
+    
+        async function handleSPSP(ctx: any, next: any)
         {
-            const details = streamServer.generateAddressAndSecret()
-            ctx.body = {
-                destination_account: details.destinationAccount,
-                shared_secret: details.sharedSecret.toString('base64')
-            }
-            ctx.set('Content-Type', 'application/spsp4+json')
-            ctx.set('Access-Control-Allow-Origin', '*')
-        }
-    }
-
-    app
-        .use(handleSPSP)
-        .listen(port);
-
-    console.log('listening on ' + port);
-    const paymentPointer: string = '$' + name + '.localtunnel.me';
-    localtunnel(port, { subdomain: name }, (err: any, tunnel: any) => 
-    {
-            if (err) 
+            if (ctx.get('Accept').indexOf('application/spsp4+json') !== -1)
             {
-                console.error(err);
-                process.exit(1);
+                const details = streamServer.generateAddressAndSecret();
+                ctx.body = {
+                    destination_account: details.destinationAccount,
+                    shared_secret: details.sharedSecret.toString('base64')
+                };
+                ctx.set('Content-Type', 'application/spsp4+json');
+                ctx.set('Access-Control-Allow-Origin', '*');
             }
-
-            console.log(chalk.green('public at:', tunnel.url));
-            console.log(chalk.green('payment pointer is:', paymentPointer));
-    });
+        }
+    
+        app
+            .use(handleSPSP)
+            .listen(port);
+    
+        console.log('listening on ' + port);
+        localtunnel(port, { subdomain: name }, (err: any, tunnel: any) => 
+        {
+                if (err) 
+                {
+                    console.error(err);
+                    process.exit(1);
+                }
+    
+                console.log(chalk.green('public at:', tunnel.url));
+                console.log(chalk.green('payment pointer is:', paymentPointer));
+        });
+    }
 
     return paymentPointer;
 }
