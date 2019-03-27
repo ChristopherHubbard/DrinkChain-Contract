@@ -1,27 +1,19 @@
 import { Context } from "koa";
-import axios, { AxiosResponse } from 'axios';
-import { SPSP, createPlugin } from 'ilp/src';
+import { SPSP } from 'ilp/src';
 import { configure, payment } from 'paypal-rest-sdk';
-import { createHash } from 'crypto';
 
 // Import base route class
-import { OrderData } from '../models';
 import { CustomRouter } from "./CustomRouter";
 import { SPSPServer } from '../paymentReceivers';
+import { orderService } from "../services";
 
 // Import the drink config file
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
-const assetScale: number = require('../config/pricing.json').assetScale;
-const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
-const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
-const paymentPointer: string = require('../config/hostSPSP.json').paymentPointer;
+const { assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { paymentPointer } = require('../config/payments.json');
 
-// Set up a hash -> orderData map for managing the order information without timeout
-// What to use for hash? -- Order numb
-const orderMap: Map<string, OrderData> = new Map<string, OrderData>();
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
 
 // Set the locals -- is there a better way to manage the paymentTimeout and currentData?
-const paymentTimeout: number = 30 * 10000;
 let spsp: string;
 
 // Configure Paypal -- can set this dynamically to live?
@@ -56,10 +48,10 @@ export class DrinkPaymentRouter extends CustomRouter
                 await SPSP.query(paymentPointer);
 
                 // Create the order hash
-                const orderHash: string = this.createData(action, infoFields);
+                const orderHash: string = orderService.createData(action, infoFields);
 
                 // This does not give the correct hash!!
-                spsp = await SPSPServer.run(!spsp, this.order);
+                spsp = await SPSPServer.run(!spsp, orderService.order);
     
                 // Send the invoice back -- needed for the resolution with payment-request client side
                 ctx.body = {
@@ -84,7 +76,7 @@ export class DrinkPaymentRouter extends CustomRouter
             const { action } = JSON.parse(ctx.request.body.body);
             const infoFields = JSON.parse(JSON.parse(ctx.request.body.body).infoFields);
 
-            const orderHash: string = this.createData(action, infoFields);
+            const orderHash: string = orderService.createData(action, infoFields);
 
             // This should work as long as the orderHash call didnt fail
             const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
@@ -103,7 +95,7 @@ export class DrinkPaymentRouter extends CustomRouter
                         currency: 'USD',
                         total: amount.toString()
                     },
-                    description: `Payment for ${(orderMap.get(orderHash) as OrderData).action}`
+                    description: `Payment to paypal for ${host} action(s) on order ${orderHash}`
                 }]
             };
 
@@ -162,7 +154,7 @@ export class DrinkPaymentRouter extends CustomRouter
                         console.log('Payment completed successfully');
 
                         // Call order -- should be successful -- what amount to send?
-                        const res: any = await this.order(orderHash, Number(total), 'paypal');
+                        const res: any = await orderService.order(orderHash, Number(total), 'paypal');
 
                         console.log(res);
                         resolve();
@@ -175,96 +167,5 @@ export class DrinkPaymentRouter extends CustomRouter
                 });
             });
         });
-    }
-
-    private createData(action: string, infoFields: any): string
-    {
-        if (drinks.get(action) !== undefined)
-        {
-            // Set the data and create the timeout -- how long?
-            const currentData: OrderData = {
-                action: action,
-                infoFields: new Map<string, string>(Object.entries(infoFields)),
-                date: new Date()
-            };
-
-            // This orderHash needs to be set in ILP to let callback know the order
-            const currentDataHash: string = createHash('sha256')
-                                                .update(JSON.stringify(currentData), 'utf8')
-                                                .digest('hex');
-
-            // Add the orderData to the map?
-            orderMap.set(currentDataHash, currentData);
-
-            // Set the timeout to remove the data
-            setTimeout(() =>
-            {
-                // Delete the orderData from the map
-                orderMap.delete(currentDataHash);
-            }, paymentTimeout);
-
-            return currentDataHash;
-        }
-        else
-        {
-            // What to do on a failure?
-            console.error('Error creating the payment data')
-            return '';
-        }
-    }
-
-    private async order(orderHash: string, amount: number, method: string): Promise<any>
-    {
-        // Send the request to the bar -- use the currently set data
-        if (typeof orderMap.get(orderHash) !== undefined)
-        {
-            const { action, infoFields } = orderMap.get(orderHash) as OrderData;
-            if (Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale))
-            {
-                // Amount is not paid in full -- currently only full payments are supported, since refunds fail
-                console.error('Action was not paid for in full!');
-                throw new Error('500 error');
-            }
-
-            // Send the payment to the owner's SPSP pointer -- should still be available since query
-            if (method === 'interledger')
-            {
-                await SPSP.pay(createPlugin(), {
-                    receiver: paymentPointer,
-                    sourceAmount: Number(amount)
-                });
-            }
-
-            const requestOptions: any =
-            {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                params: {
-                    ingredients: actionsRequirements.get(action),
-                    destination: infoFields.get('destination number')
-                }
-            };
-
-            try
-            {
-                const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
-
-                // How to process the response?
-                console.log('Successful order!');
-
-                // Remove the data
-                orderMap.delete(orderHash);
-            }
-            catch (error)
-            {
-                // There was some error sending to the bar
-                console.error('Error on order!');
-            }
-        }
-        else
-        {
-            // Return error
-            console.error('Data not found!');
-        }
     }
 }

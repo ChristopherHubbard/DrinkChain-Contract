@@ -7,5 +7,6 @@
         "Vodka": 6
     },
     "baseAsset": "XRP",
-    "assetScale": 9
+    "assetScale": 9,
+    "usdExchangeRate": 3
 }

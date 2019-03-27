@@ -3,20 +3,17 @@ import axios, { AxiosResponse } from 'axios';
 
 // Import base route class
 import { CustomRouter } from "./CustomRouter";
-
-// Set up the ilp configs
-import { ILDCP, createPlugin } from 'ilp/src';
-const ilpPrice: any = require('ilp-price');
-const priceFetch: any = new ilpPrice();
+import { paymentService } from "../services";
 
 // Import the config files for this bar
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
-const baseAsset: string = require('../config/pricing.json').baseAsset;
-const assetScale: string = require('../config/pricing.json').assetScale;
+const { baseAsset, assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { deviceURL } = require('../config/deviceConnection.json');
+const { supportedMethods, paymentPointer } = require('../config/payments.json');
+
+// Create some locals
 const infoFields: Array<string> = new Array<string>(require('../config/infoFields.json').infoFields);
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
-const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
-const supportedMethods: Array<string> = require('../config/payments.json').supportedMethods;
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
 
 export class ContractInfoRouter extends CustomRouter
 {
@@ -67,20 +64,19 @@ export class ContractInfoRouter extends CustomRouter
             // Retrieve the pricing info for this selected action
             try
             {
-                const selectedDrink: string = ctx.request.query.action;
-                const clientCurrency: string = ctx.request.query.clientAsset
-                const price: number = drinks.get(selectedDrink) as number;
+                const { action, clientAsset, clientPaymentPointer } = ctx.request.query;
+                const price: number = drinks.get(action) as number;
 
                 // Check for the base currency -- should work but routing issue??
                 // Make this work with USD
 
                 // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
-                const exchangeRate: number = 1;
+                const exchangeRate: number = await paymentService.exchangeRate(clientAsset, clientPaymentPointer, baseAsset, paymentPointer);
                 const priceInClientCurrency = price * exchangeRate
                 ctx.body = {
                     priceInfo: {
                         price: priceInClientCurrency,
-                        baseCurrency: clientCurrency
+                        baseCurrency: clientAsset
                     }
                 };
                 ctx.status = 200;

@@ -1,5 +1,7 @@
 {
     "supportedMethods": [
-        "interledger"
-    ]
+        "interledger",
+        "paypal"
+    ],
+    "paymentPointer": "$host2.localtunnel.me"
 }
