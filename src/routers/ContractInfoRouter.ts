@@ -72,10 +72,15 @@ export class ContractInfoRouter extends CustomRouter
 
                 // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
                 const exchangeRate: number = await paymentService.exchangeRate(clientAsset, clientPaymentPointer, baseAsset, paymentPointer);
-                const priceInClientCurrency = price * exchangeRate
+                if (exchangeRate < 0)
+                {
+                    throw new Error('No exchange rate could be found. Check your SPSP configuration.');
+                }
+
+                // Get the real price
                 ctx.body = {
                     priceInfo: {
-                        price: priceInClientCurrency,
+                        price: price * exchangeRate,
                         baseCurrency: clientAsset
                     }
                 };
@@ -86,7 +91,7 @@ export class ContractInfoRouter extends CustomRouter
                 console.error(error);
                 ctx.status = 500;
                 ctx.body = {
-                    error: error
+                    error: error.toString()
                 }
             }
         });
@@ -189,12 +194,39 @@ export class ContractInfoRouter extends CustomRouter
              ctx.status = 200;
         });
 
-        this.router.get('/env', async (ctx: any): Promise<any> => 
+        this.router.get('/health', async (ctx: Context, next: Function) =>
         {
-            ctx.body = {
-                env: process.env
-            };
-            ctx.status = 200;
+            // Check the health of the device -- health checks of this contract will be held on the client or server!
+            try
+            {
+                const requestOptions: any =
+                {
+                    method: 'OPTIONS',
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                
+                // Send options requests for the device endpoints -- this insures they exist!
+                const [cupResponse, quantityResponse, orderResponse]: Array<AxiosResponse> = await Promise.all([
+                    (axios as any).options(`${deviceURL}/cups`, requestOptions),
+                    (axios as any).options(`${deviceURL}/quantity`, requestOptions),
+                    (axios as any).options(`${deviceURL}/order`, requestOptions)
+                ]);
+
+                // If here then all requests succeeded
+                ctx.body = {
+                    healthy: true
+                };
+                ctx.status = 200;
+            }
+            catch (error)
+            {
+                ctx.body = {
+                    healthy: false
+                };
+
+                // Still a successful request yeah?
+                ctx.status = 200;
+            }
         });
     }
 }

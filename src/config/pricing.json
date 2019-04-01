@@ -8,5 +8,7 @@
     },
     "baseAsset": "XRP",
     "assetScale": 9,
-    "usdExchangeRate": 3
+    "exchangeRates": {
+        "USD": 3.3
+    }
 }

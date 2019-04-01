@@ -13,9 +13,6 @@ const { paymentPointer } = require('../config/payments.json');
 
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
 
-// Set the locals -- is there a better way to manage the paymentTimeout and currentData?
-let spsp: string;
-
 // Configure Paypal -- can set this dynamically to live?
 configure({
     mode: 'sandbox',
@@ -49,13 +46,10 @@ export class DrinkPaymentRouter extends CustomRouter
 
                 // Create the order hash
                 const orderHash: string = orderService.createData(action, infoFields);
-
-                // This does not give the correct hash!!
-                spsp = await SPSPServer.run(!spsp, orderService.order);
     
                 // Send the invoice back -- needed for the resolution with payment-request client side
                 ctx.body = {
-                    paymentPointer: spsp,
+                    paymentPointer: SPSPServer.paymentPointer,
                     orderHash: orderHash
                 };
                 ctx.status = 200;
