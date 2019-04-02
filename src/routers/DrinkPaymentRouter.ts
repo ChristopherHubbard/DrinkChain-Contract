@@ -1,6 +1,6 @@
 import { Context } from "koa";
 import { SPSP } from 'ilp/src';
-import { configure, payment } from 'paypal-rest-sdk';
+import { configure, payment, PaymentResponse } from 'paypal-rest-sdk';
 
 // Import base route class
 import { CustomRouter } from "./CustomRouter";
@@ -73,7 +73,8 @@ export class DrinkPaymentRouter extends CustomRouter
             const orderHash: string = orderService.createData(action, infoFields);
 
             // This should work as long as the orderHash call didnt fail
-            const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
+            //const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
+            const amount: number = 2;
 
             const create_payment_json: any = {
                 intent: 'sale',
@@ -81,8 +82,8 @@ export class DrinkPaymentRouter extends CustomRouter
                     payment_method: 'paypal'
                 },
                 redirect_urls: {
-                    return_url: `https://${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
-                    cancel_url: 'https://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
+                    return_url: `http://${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
+                    cancel_url: 'http://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
                 },
                 transactions: [{
                     amount: {
@@ -96,6 +97,7 @@ export class DrinkPaymentRouter extends CustomRouter
             // Some next level async BS
             await new Promise((resolve, reject): void =>
             {
+                const links: any = {};
                 payment.create(create_payment_json, (error, payment): any =>
                 {
                     // Dumbass callback crap -- try to emulate a try-catch with if-else
@@ -108,14 +110,13 @@ export class DrinkPaymentRouter extends CustomRouter
                         console.error(error);
                         reject();
                     }
-                    else
+                    else if (payment && payment.links)
                     {
                         // Will want to redirect the user to the approve_url -- how does this call execute?
                         // Need it to call my endpoint, not PayPals
                         ctx.body = {
                             payment_info: payment
                         };
-                        ctx.status = 200;
                         console.log(payment);
                         resolve();
                     }
@@ -126,8 +127,8 @@ export class DrinkPaymentRouter extends CustomRouter
         // This is the route for executing a paypal payment -- how to make sure currentData is set for PayPal payments?
         this.router.get('/paypal/execute-payment', async (ctx: Context, next: Function): Promise<any> =>
         {
-            // Will this let me pass in the orderHash?
-            const { paymentId, PayerID, orderHash } = ctx.request.query;
+            // Will this let me pass in the orderHash? -- get the orderHash from the description!
+            const { paymentId, PayerID } = ctx.request.query;
             const payerId: payment.ExecuteRequest = {
                 payer_id: PayerID
             };
@@ -144,13 +145,20 @@ export class DrinkPaymentRouter extends CustomRouter
                     }
                     else if (payment.state === 'approved')
                     {
-                        const { total } = payment.transactions[0].amount
+                        const { total } = payment.transactions[0].amount;
+                        
+                        // Get the orderHash from the description
+                        const orderHash: string = (payment.transactions[0].description as string).split(' ').pop() as string;
                         console.log('Payment completed successfully');
 
                         // Call order -- should be successful -- what amount to send?
                         const res: any = await orderService.order(orderHash, Number(total), 'paypal');
 
                         console.log(res);
+
+                        // Weird hack to close the window on a successful run
+                        ctx.body = '<script> window.close() </script>';
+                        ctx.status = 200;
                         resolve();
                     }
                     else

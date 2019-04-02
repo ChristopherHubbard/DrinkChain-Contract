@@ -50,9 +50,13 @@ export default class Server
             new ContractInfoRouter("This is the router for contract information").router,
             new DrinkPaymentRouter("This is the router to send payed requests to the device").router
         );
+
+        const corsOptions: any = {
+            origin: '*'
+        };
         
         // Use the router middleware -- combine all the routers
-        this.app.use(CORS());
+        this.app.use(CORS(corsOptions));
         this.app.use(serve(__dirname + '/assets'));
         this.app.use(combinedRouter());
     }
