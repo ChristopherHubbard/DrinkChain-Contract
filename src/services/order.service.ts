@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios';
 import { createHash } from 'crypto';
 import { OrderData } from "../models";
 
-const { assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { assetScale, actionsAndPrices, exchangeRates } = require('../config/pricing.json');
 const { deviceURL } = require('../config/deviceConnection.json');
 const { paymentPointer } = require('../config/payments.json');
 
@@ -26,7 +26,8 @@ const order = async (orderHash: string, amount: number, method: string): Promise
         const { action, infoFields } = orderMap.get(orderHash) as OrderData;
 
         // Fix this to compare against the exchange rate in USD case
-        if (Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale))
+        if ((method === 'interledger' && Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale)) || 
+            (method === 'paypal' && Number(amount) < (drinks.get(action) as number) * exchangeRates.USD))
         {
             // Amount is not paid in full -- currently only full payments are supported, since refunds fail
             console.error('Action was not paid for in full!');
