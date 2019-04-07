@@ -24,6 +24,8 @@ const order = async (orderHash: string, amount: number, method: string): Promise
     if (typeof orderMap.get(orderHash) !== undefined)
     {
         const { action, infoFields } = orderMap.get(orderHash) as OrderData;
+
+        // Fix this to compare against the exchange rate in USD case
         if (Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale))
         {
             // Amount is not paid in full -- currently only full payments are supported, since refunds fail

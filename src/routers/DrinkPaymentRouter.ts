@@ -64,7 +64,7 @@ export class DrinkPaymentRouter extends CustomRouter
         this.router.post('/paypal/create-payment', async (ctx: any, next: Function): Promise<any> =>
         {
             // Extract the hostname of this contract
-            const { host } = ctx;
+            const { host, URL } = ctx;
 
             // Extract the payment total?
             const { action } = JSON.parse(ctx.request.body.body);
@@ -73,8 +73,7 @@ export class DrinkPaymentRouter extends CustomRouter
             const orderHash: string = orderService.createData(action, infoFields);
 
             // This should work as long as the orderHash call didnt fail
-            //const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
-            const amount: number = 2;
+            const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
 
             const create_payment_json: any = {
                 intent: 'sale',
@@ -82,8 +81,8 @@ export class DrinkPaymentRouter extends CustomRouter
                     payment_method: 'paypal'
                 },
                 redirect_urls: {
-                    return_url: `http://${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
-                    cancel_url: 'http://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
+                    return_url: `${URL.protocol}//${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
+                    cancel_url: 'https://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
                 },
                 transactions: [{
                     amount: {
@@ -97,7 +96,6 @@ export class DrinkPaymentRouter extends CustomRouter
             // Some next level async BS
             await new Promise((resolve, reject): void =>
             {
-                const links: any = {};
                 payment.create(create_payment_json, (error, payment): any =>
                 {
                     // Dumbass callback crap -- try to emulate a try-catch with if-else
