@@ -23,6 +23,7 @@ export class ContractInfoRouter extends CustomRouter
         // Create the routes -- will call the implemented method
         this.CreateRoutes();
     }
+    
     // Implement the route creating method
     protected CreateRoutes(): void
     {

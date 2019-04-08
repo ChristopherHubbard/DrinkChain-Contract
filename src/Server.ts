@@ -1,6 +1,6 @@
 import * as Koa from "koa";
 import * as combineRouters from "koa-combine-routers";
-import { DrinkPaymentRouter, ContractInfoRouter } from "./routers";
+import { DrinkPaymentRouter, ContractInfoRouter, DeviceSetupRouter } from "./routers";
 import { SPSPServer } from './paymentReceivers';
 import * as CORS from "@koa/cors";
 import * as serve from "koa-static";
@@ -48,7 +48,8 @@ export default class Server
         // Attach all the routers
         const combinedRouter = combineRouters(
             new ContractInfoRouter("This is the router for contract information").router,
-            new DrinkPaymentRouter("This is the router to send payed requests to the device").router
+            new DrinkPaymentRouter("This is the router to send payed requests to the device").router,
+            new DeviceSetupRouter('This is the device setup router', '/device').router
         );
 
         const corsOptions: any = {
