@@ -1,24 +1,24 @@
 import { Context } from "koa";
-import axios, { AxiosResponse } from 'axios';
-import { SPSP, createPlugin } from 'ilp';
+import { SPSP } from 'ilp/src';
+import { configure, payment, PaymentResponse } from 'paypal-rest-sdk';
 
 // Import base route class
-import { OrderData } from '../models';
 import { CustomRouter } from "./CustomRouter";
-import SPSPServer from '../SPSPServer';
+import { SPSPServer } from '../paymentReceivers';
+import { orderService } from "../services";
 
 // Import the drink config file
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
-const assetScale: number = require('../config/pricing.json').assetScale;
-const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
-const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
-const paymentPointer: string = require('../config/hostSPSP.json').paymentPointer;
+const { assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { paymentPointer } = require('../config/payments.json');
 
-// Set the locals -- is there a better way to manage the paymentTimeout and currentData?
-const paymentTimeout: number = 30 * 1000;
-let currentData: OrderData | undefined;
-let spsp: string;
-let currentTimeout: NodeJS.Timeout;
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
+
+// Configure Paypal -- can set this dynamically to live?
+configure({
+    mode: 'sandbox',
+    client_id: process.env.PAYPAL_CLIENT_ID as string || 'AetavAfUQfYBB4B_tCDsLv_JZj_RJhkf_74stpk7P77JHLcROG0B0Kj8J9R15cT0yC360RbxzwGgvjUh',
+    client_secret: process.env.PAYPAL_SECRET as string || 'EHe8yukQLsaKxoSVttge1FBFmDeoLlfyTkHW2mYGThfVLGJyMiYWO8oWXGGUGIKRRftsd2Xrh_s2Qsc_'
+});
 
 export class DrinkPaymentRouter extends CustomRouter
 {
@@ -33,20 +33,24 @@ export class DrinkPaymentRouter extends CustomRouter
     // Implement the route creating method
     protected CreateRoutes(): void
     {
-        this.router.get('/invoice', async (ctx: Context, next: Function): Promise<any> =>
+        this.router.post('/interledger/create-payment', async (ctx: any, next: Function): Promise<any> =>
         {
+            // Check if the data is set -- should be unset on timeout
+            const { action } = JSON.parse(ctx.request.body.body);
+            const infoFields = JSON.parse(JSON.parse(ctx.request.body.body).infoFields);
+
             try
             {
                 // Query to make sure the hosts paymentPointer is available
                 await SPSP.query(paymentPointer);
-                if (!spsp)
-                {
-                    spsp = await SPSPServer(this.order);
-                }
+
+                // Create the order hash
+                const orderHash: string = orderService.createData(action, infoFields);
     
                 // Send the invoice back -- needed for the resolution with payment-request client side
                 ctx.body = {
-                    paymentPointer: spsp
+                    paymentPointer: SPSPServer.paymentPointer,
+                    orderHash: orderHash
                 };
                 ctx.status = 200;
             }
@@ -56,93 +60,112 @@ export class DrinkPaymentRouter extends CustomRouter
             }
         });
 
-        // Endpoint to set the data
-        this.router.post('/setData', async (ctx: any, next: Function): Promise<any> =>
+        // This is the route for creating a Paypal payment
+        this.router.post('/paypal/create-payment', async (ctx: any, next: Function): Promise<any> =>
         {
-            // Check if the data is set -- should be unset on timeout
+            // Extract the hostname of this contract
+            const { host, URL } = ctx;
+
+            // Extract the payment total?
             const { action } = JSON.parse(ctx.request.body.body);
             const infoFields = JSON.parse(JSON.parse(ctx.request.body.body).infoFields);
 
-            if (typeof currentData !== undefined && drinks.get(action) !== undefined)
-            {
-                // Set the data and create the timeout -- how long?
-                currentData = <OrderData> {
-                    action: action,
-                    infoFields: new Map<string, string>(Object.entries(infoFields))
-                };
+            const orderHash: string = orderService.createData(action, infoFields);
 
-                // Set the timeout to remove the data
-                currentTimeout = setTimeout(() =>
-                {
-                    // Set the currentData to undefined
-                    currentData = undefined;
-                }, paymentTimeout);
+            // This should work as long as the orderHash call didnt fail
+            const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
 
-                ctx.body = {
-                    success: true
-                };
-                ctx.status = 200;
-            }
-            else
-            {
-                ctx.body = {
-                    success: false
-                };
-                ctx.status = 503;
-            }
-        });
-    }
-
-    private async order(amount: number): Promise<any>
-    {
-        // Send the request to the bar -- use the currently set data
-        if (typeof currentData !== undefined)
-        {
-            const { action, infoFields } = currentData as OrderData;
-            if (Number(amount) < (drinks.get(action) as number) * Math.pow(10, assetScale))
-            {
-                // Amount is not paid in full -- currently only full payments are supported, since refunds fail
-                console.error('Action was not paid for in full!');
-                throw new Error('500 error');
-            }
-
-            // Send the payment to the owner's SPSP pointer -- should still be available since query
-            await SPSP.pay(createPlugin(), {
-                receiver: paymentPointer,
-                sourceAmount: Number(amount)
-            });
-
-            const requestOptions: any =
-            {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                params: {
-                    ingredients: actionsRequirements.get(action),
-                    destination: infoFields.get('destination number')
-                }
+            const create_payment_json: any = {
+                intent: 'sale',
+                payer: {
+                    payment_method: 'paypal'
+                },
+                redirect_urls: {
+                    return_url: `${URL.protocol}//${host}/paypal/execute-payment`, // This return URL is what its going to call for execute... WTF
+                    cancel_url: 'https://iotsharenet.com/home/order' // This is where to go on paypal cancel -- is this right?
+                },
+                transactions: [{
+                    amount: {
+                        currency: 'USD',
+                        total: amount.toString()
+                    },
+                    description: `Payment to paypal for ${host} action(s) on order ${orderHash}`
+                }]
             };
 
-            try
+            // Some next level async BS
+            await new Promise((resolve, reject): void =>
             {
-                const res: AxiosResponse = await axios.get(`${deviceURL}/order`, requestOptions);
+                payment.create(create_payment_json, (error, payment): any =>
+                {
+                    // Dumbass callback crap -- try to emulate a try-catch with if-else
+                    if (error)
+                    {
+                        ctx.body = {
+                            success: false
+                        };
+                        ctx.status = 500;
+                        console.error(error);
+                        reject();
+                    }
+                    else if (payment && payment.links)
+                    {
+                        // Will want to redirect the user to the approve_url -- how does this call execute?
+                        // Need it to call my endpoint, not PayPals
+                        ctx.body = {
+                            payment_info: payment
+                        };
+                        console.log(payment);
+                        resolve();
+                    }
+                })
+            });
+        });
 
-                // How to process the response?
-                console.log('Successful order!');
-
-                // Clear the timeout and remove the data
-                clearTimeout(currentTimeout);
-                currentData = undefined;
-            }
-            catch (error)
-            {
-                // There was some error sending to the bar
-                console.log('Error on order!');
-                throw error;
-            }
-        }
-        else
+        // This is the route for executing a paypal payment -- how to make sure currentData is set for PayPal payments?
+        this.router.get('/paypal/execute-payment', async (ctx: Context, next: Function): Promise<any> =>
         {
-            throw new Error('500 Error');
-        }
+            // Will this let me pass in the orderHash? -- get the orderHash from the description!
+            const { paymentId, PayerID } = ctx.request.query;
+            const payerId: payment.ExecuteRequest = {
+                payer_id: PayerID
+            };
+
+            await new Promise((resolve, reject): void =>
+            {
+                payment.execute(paymentId, payerId, async (error, payment): Promise<any> => 
+                {
+                    // How to make sure current data is set at this point?
+                    if (error)
+                    {
+                        console.error(error);
+                        reject();
+                    }
+                    else if (payment.state === 'approved')
+                    {
+                        const { total } = payment.transactions[0].amount;
+                        
+                        // Get the orderHash from the description
+                        const orderHash: string = (payment.transactions[0].description as string).split(' ').pop() as string;
+                        console.log('Payment completed successfully');
+
+                        // Call order -- should be successful -- what amount to send?
+                        const res: any = await orderService.order(orderHash, Number(total), 'paypal');
+
+                        console.log(res);
+
+                        // Weird hack to close the window on a successful run
+                        ctx.body = '<script> window.close() </script>';
+                        ctx.status = 200;
+                        resolve();
+                    }
+                    else
+                    {
+                        console.error('Payment not successful');
+                        reject();
+                    }
+                });
+            });
+        });
     }
 }

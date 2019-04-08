@@ -1,0 +1,7 @@
+{
+    "supportedMethods": [
+        "interledger",
+        "paypal"
+    ],
+    "paymentPointer": "$3078b35c9c231704.localtunnel.me"
+}

@@ -3,19 +3,17 @@ import axios, { AxiosResponse } from 'axios';
 
 // Import base route class
 import { CustomRouter } from "./CustomRouter";
-
-// Set up the ilp configs
-import { ILDCP, createPlugin } from 'ilp';
-const ilpPrice: any = require('ilp-price');
-const priceFetch: any = new ilpPrice();
+import { paymentService } from "../services";
 
 // Import the config files for this bar
-const drinks: Map<string, number> = new Map<string, number>(Object.entries(require('../config/pricing.json').actionsAndPrices));
-const baseAsset: string = require('../config/pricing.json').baseAsset;
-const assetScale: string = require('../config/pricing.json').assetScale;
+const { baseAsset, assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { deviceURL } = require('../config/deviceConnection.json');
+const { supportedMethods, paymentPointer } = require('../config/payments.json');
+
+// Create some locals
 const infoFields: Array<string> = new Array<string>(require('../config/infoFields.json').infoFields);
 const actionsRequirements: Map<string, any> = new Map<string, any>(Object.entries(require('../config/actionsRequirements.json').actions));
-const deviceURL: string = require('../config/deviceConnection.json').deviceURL;
+const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
 
 export class ContractInfoRouter extends CustomRouter
 {
@@ -25,6 +23,7 @@ export class ContractInfoRouter extends CustomRouter
         // Create the routes -- will call the implemented method
         this.CreateRoutes();
     }
+    
     // Implement the route creating method
     protected CreateRoutes(): void
     {
@@ -66,20 +65,24 @@ export class ContractInfoRouter extends CustomRouter
             // Retrieve the pricing info for this selected action
             try
             {
-                const selectedDrink: string = ctx.request.query.action;
-                const clientCurrency: string = ctx.request.query.clientAsset
-                const price: number = drinks.get(selectedDrink) as number;
+                const { action, clientAsset, clientPaymentPointer } = ctx.request.query;
+                const price: number = drinks.get(action) as number;
 
                 // Check for the base currency -- should work but routing issue??
                 // Make this work with USD
 
                 // Connect the plugin -- may not need this but this is indicative of the moneyd connection process in Codius
-                const exchangeRate: number = 1;
-                const priceInClientCurrency = price * exchangeRate
+                const exchangeRate: number = await paymentService.exchangeRate(clientAsset, clientPaymentPointer, baseAsset, paymentPointer);
+                if (exchangeRate < 0)
+                {
+                    throw new Error('No exchange rate could be found. Check your SPSP configuration.');
+                }
+
+                // Get the real price
                 ctx.body = {
                     priceInfo: {
-                        price: priceInClientCurrency,
-                        baseCurrency: clientCurrency
+                        price: price * exchangeRate,
+                        baseCurrency: clientAsset
                     }
                 };
                 ctx.status = 200;
@@ -89,8 +92,28 @@ export class ContractInfoRouter extends CustomRouter
                 console.error(error);
                 ctx.status = 500;
                 ctx.body = {
-                    error: error
+                    error: error.toString()
                 }
+            }
+        });
+
+        this.router.get('/paymentMethods', async (ctx: Context): Promise<any> =>
+        {
+            // Get the accepted payment methods by this contract
+            try
+            {
+                ctx.body = {
+                    supportedMethods: supportedMethods
+                };
+                ctx.status = 200;
+            }
+            catch (error)
+            {
+                console.error(error);
+                ctx.status = 500;
+                ctx.body = {
+                    error: error
+                };
             }
         });
 
@@ -170,6 +193,41 @@ export class ContractInfoRouter extends CustomRouter
                  canOrder: true
              };
              ctx.status = 200;
+        });
+
+        this.router.get('/health', async (ctx: Context, next: Function) =>
+        {
+            // Check the health of the device -- health checks of this contract will be held on the client or server!
+            try
+            {
+                const requestOptions: any =
+                {
+                    method: 'OPTIONS',
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                
+                // Send options requests for the device endpoints -- this insures they exist!
+                const [cupResponse, quantityResponse, orderResponse]: Array<AxiosResponse> = await Promise.all([
+                    (axios as any).options(`${deviceURL}/cups`, requestOptions),
+                    (axios as any).options(`${deviceURL}/quantity`, requestOptions),
+                    (axios as any).options(`${deviceURL}/order`, requestOptions)
+                ]);
+
+                // If here then all requests succeeded
+                ctx.body = {
+                    healthy: true
+                };
+                ctx.status = 200;
+            }
+            catch (error)
+            {
+                ctx.body = {
+                    healthy: false
+                };
+
+                // Still a successful request yeah?
+                ctx.status = 200;
+            }
         });
     }
 }

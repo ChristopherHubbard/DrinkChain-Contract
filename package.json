@@ -8,7 +8,7 @@
     "docker-debug": "npm run build && docker-compose build && docker-compose up",
     "dockerize": "npm run build && docker build -t cbhubb8/codius-bar-contract .",
     "build": "npm run copy && tsc -p ./",
-    "copy": "copyfiles src/**/*.json distlib/",
+    "copy": "copyfiles src/**/*.json distlib/ && copyfiles src/**/*.png distlib/",
     "test": "npm run build && jest --coverage --collectCoverageFrom=src/**/*.{ts,tsx}"
   },
   "repository": {
@@ -31,12 +31,16 @@
     "@types/koa-send": "^4.1.1",
     "@types/koa-static": "^4.0.1",
     "@types/koa__cors": "^2.2.3",
+    "@types/paypal-rest-sdk": "^1.7.4",
     "axios": "^0.18.0",
     "chalk": "^2.4.2",
     "copyfiles": "^2.1.0",
     "get-port": "^4.1.0",
     "ilp": "^14.1.0",
+    "ilp-packet": "^3.0.8",
     "ilp-plugin": "^3.2.1",
+    "ilp-price": "^1.0.1",
+    "ilp-protocol-stream": "^1.8.9",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.2.1",
     "koa-combine-routers": "^4.0.2",
@@ -46,7 +50,8 @@
     "koa-router": "^7.4.0",
     "koa-send": "^5.0.0",
     "koa-static": "^5.0.0",
-    "localtunnel": "^1.9.1"
+    "localtunnel": "^1.9.1",
+    "paypal-rest-sdk": "^1.8.1"
   },
   "devDependencies": {
     "@types/jest-diff": "^20.0.0",
@@ -54,7 +59,7 @@
     "jest": "^24.1.0",
     "jest-diff": "^24.0.0",
     "moneyd": "^4.3.0",
-    "moneyd-uplink-xrp": "^1.3.4",
+    "moneyd-uplink-xrp": "^1.3.5",
     "nodemon": "^1.18.10",
     "supertest": "^3.4.2",
     "ts-jest": "^24.0.0",

@@ -38,8 +38,12 @@ moneyd xrp:start --admin-api-port 7769
 npm install -g moneyd-gui
 moneyd-gui
 
-#################### Run the tests #########################################
+#################### Run the tests ###############################################
 npm run test
+
+#################### Debug Docker container ######################################
+Some issues arise only in the dockerized version of the application. Always test the container before uploading a contract.
+To test the container in debug mode in VSCode, run npm run dockerize, followed by running the Attach to Docker launch script.
 
 #################### Upload the contract #########################################
 
@@ -53,3 +57,7 @@ docker push cbhubb8/codius-bar-contract
 
 # Upload to the top codius host from the codius host site -- delete codiusstate.json file if necessary
 codius upload --host https://viper.phobosnode.com  --duration 300
+
+################### Access environment variables ##################################
+All environment variables in codius can be accessed on process.env
+Only public environment variables will be available to see to the public on upload
