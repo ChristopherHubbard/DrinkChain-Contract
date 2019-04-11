@@ -126,6 +126,10 @@ export class ContractInfoRouter extends CustomRouter
                 headers: { 'Content-Type': 'application/json' }
             };
 
+            ctx.body = {
+                canOrder: true
+            };
+            return ctx;
             // Try to get the current cup quantity -- check that this works with koas pipeline
             const res: AxiosResponse = await axios.get(`${deviceURL}/cups`, requestOptions);
             if (!res || res.data < 1)

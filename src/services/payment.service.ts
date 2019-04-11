@@ -5,6 +5,10 @@ const { exchangeRates } = require('../config/pricing.json');
 
 const exchangeRate = async (clientCurrency: string, clientPaymentPointer: string, hostCurrency: string, hostPaymentPointer: string): Promise<number> =>
 {
+    if (clientCurrency === hostCurrency)
+    {
+        return 1;
+    }
     if (clientPaymentPointer && clientCurrency !== 'USD')
     {
         // No way to find the exact exchange rate currently...
