@@ -6,9 +6,9 @@
         "Coke": 2,
         "Vodka": 6
     },
-    "baseAsset": "XRP",
+    "baseAsset": "ETH",
     "assetScale": 9,
     "exchangeRates": {
-        "USD": 3.3
+        "USD": 1
     }
 }

@@ -126,13 +126,6 @@ export class ContractInfoRouter extends CustomRouter
                 headers: { 'Content-Type': 'application/json' }
             };
 
-            // This is just for testing -- remove soon!
-            ctx.body = {
-                canOrder: true
-            };
-            ctx.status = 200;
-            return ctx;
-
             // Try to get the current cup quantity -- check that this works with koas pipeline
             const res: AxiosResponse = await axios.get(`${deviceURL}/cups`, requestOptions);
             if (!res || res.data < 1)
@@ -207,11 +200,11 @@ export class ContractInfoRouter extends CustomRouter
                 };
                 
                 // Send options requests for the device endpoints -- this insures they exist!
-                const [cupResponse, quantityResponse, orderResponse]: Array<AxiosResponse> = await Promise.all([
-                    (axios as any).options(`${deviceURL}/cups`, requestOptions),
-                    (axios as any).options(`${deviceURL}/quantity`, requestOptions),
-                    (axios as any).options(`${deviceURL}/order`, requestOptions)
-                ]);
+                // const [cupResponse, quantityResponse, orderResponse]: Array<AxiosResponse> = await Promise.all([
+                //     (axios as any).options(`${deviceURL}/cups`, requestOptions),
+                //     (axios as any).options(`${deviceURL}/quantity`, requestOptions),
+                //     (axios as any).options(`${deviceURL}/order`, requestOptions)
+                // ]);
 
                 // If here then all requests succeeded
                 ctx.body = {

@@ -8,16 +8,16 @@ import { SPSPServer } from '../paymentReceivers';
 import { orderService } from "../services";
 
 // Import the drink config file
-const { assetScale, actionsAndPrices } = require('../config/pricing.json');
+const { assetScale, actionsAndPrices, exchangeRates } = require('../config/pricing.json');
 const { paymentPointer } = require('../config/payments.json');
 
 const drinks: Map<string, number> = new Map<string, number>(Object.entries(actionsAndPrices));
 
 // Configure Paypal -- can set this dynamically to live?
 configure({
-    mode: 'sandbox',
-    client_id: process.env.PAYPAL_CLIENT_ID as string || 'AetavAfUQfYBB4B_tCDsLv_JZj_RJhkf_74stpk7P77JHLcROG0B0Kj8J9R15cT0yC360RbxzwGgvjUh',
-    client_secret: process.env.PAYPAL_SECRET as string || 'EHe8yukQLsaKxoSVttge1FBFmDeoLlfyTkHW2mYGThfVLGJyMiYWO8oWXGGUGIKRRftsd2Xrh_s2Qsc_'
+    mode: 'live',
+    client_id: process.env.PAYPAL_CLIENT_ID as string,
+    client_secret: process.env.PAYPAL_SECRET as string
 });
 
 export class DrinkPaymentRouter extends CustomRouter
@@ -73,7 +73,7 @@ export class DrinkPaymentRouter extends CustomRouter
             const orderHash: string = orderService.createData(action, infoFields);
 
             // This should work as long as the orderHash call didnt fail
-            const amount: number = (drinks.get(action) as number) * Math.pow(10, assetScale);
+            const amount: number = (drinks.get(action) as number) * exchangeRates.USD;
 
             const create_payment_json: any = {
                 intent: 'sale',
@@ -87,7 +87,7 @@ export class DrinkPaymentRouter extends CustomRouter
                 transactions: [{
                     amount: {
                         currency: 'USD',
-                        total: amount.toString()
+                        total: amount.toFixed(2).toString()
                     },
                     description: `Payment to paypal for ${host} action(s) on order ${orderHash}`
                 }]
