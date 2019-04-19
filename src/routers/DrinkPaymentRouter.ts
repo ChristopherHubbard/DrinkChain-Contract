@@ -16,8 +16,8 @@ const drinks: Map<string, number> = new Map<string, number>(Object.entries(actio
 // Configure Paypal -- can set this dynamically to live?
 configure({
     mode: 'live',
-    client_id: process.env.PAYPAL_CLIENT_ID as string,
-    client_secret: process.env.PAYPAL_SECRET as string
+    client_id: process.env.PAYPAL_CLIENT_ID as string || '',
+    client_secret: process.env.PAYPAL_SECRET as string || ''
 });
 
 export class DrinkPaymentRouter extends CustomRouter

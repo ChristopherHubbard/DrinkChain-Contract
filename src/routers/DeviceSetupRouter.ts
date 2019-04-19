@@ -21,8 +21,10 @@ export class DeviceSetupRouter extends CustomRouter
     {
         this.router.post('/setup', async (ctx: any, next: Function): Promise<any> =>
         {
-            // Get the password for this device from the user -- is this secure?
-            const { password } = JSON.parse(ctx.request.body.body);
+            // Get the password for this device from the user -- should be secure due to SSL
+            // Set the origin on the device to this host
+            const { host } = ctx;
+            const { password } = ctx.request.body.body;
 
             const requestOptions: any =
             {
@@ -31,6 +33,7 @@ export class DeviceSetupRouter extends CustomRouter
                     'Content-Type': 'application/json'
                 },
                 body: {
+                    contractURL: host,
                     password: password
                 }
             };

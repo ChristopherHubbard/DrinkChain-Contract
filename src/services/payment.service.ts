@@ -58,14 +58,21 @@ const determineExchangeRate = async (clientCurrency: string, baseCurrency: strin
 {
     try
     {
+        // Try to retrive the rate from cryptonator first
         const response = await axios.get(`https://api.cryptonator.com/api/ticker/${baseCurrency}-${clientCurrency}`);
-        console.log(response);
+        console.log(response.data);
 
         return Number(response.data.ticker.price);
     }
     catch (error)
     {
         console.error(error);
+
+        // Try crypto-compare on error
+        const response = await axios.get(`https://min-api.cryptocompare.com/data/pricemulti?fsyms=${baseCurrency}&tsyms=${clientCurrency}&api_key=29ca700a66cc91e34b5057c9fac8b6d7129790da8c0d2a8de15eac412fa7f815/`);
+        console.log(response.data);
+
+        return Number(response.data[baseCurrency][clientCurrency]);
     }
 }
 
